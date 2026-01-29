@@ -33,11 +33,26 @@ const WardenComplaints = () => {
         method: "GET",
         headers: headers,
       });
+      
+      if (!response.ok) {
+        console.error(`API Error: ${response.status} - ${response.statusText}`);
+        setComplaints([]);
+        return;
+      }
+      
       const jsonData = await response.json();
 
-      setComplaints(jsonData);
+      if (Array.isArray(jsonData)) {
+        setComplaints(jsonData);
+      } else if (Array.isArray(jsonData.rows)) {
+        setComplaints(jsonData.rows);
+      } else {
+        console.error('Unexpected complaints response:', jsonData);
+        setComplaints([]);
+      }
     } catch (err) {
-      console.error(err.message);
+      console.error("Error fetching complaints:", err.message);
+      setComplaints([]);
     }
   };
 
@@ -48,10 +63,16 @@ const WardenComplaints = () => {
         headers: headers,
       });
 
-      console.log(response);
-      window.location = "/";
+      if (response.ok) {
+        console.log("Complaint updated successfully");
+        window.location = "/";
+      } else {
+        console.error(`Failed to update complaint: ${response.status} - ${response.statusText}`);
+        alert("Failed to update complaint status");
+      }
     } catch (err) {
-      console.error(err.message);
+      console.error("Error updating complaint:", err.message);
+      alert("Error updating complaint: " + err.message);
     }
   };
 
@@ -67,12 +88,15 @@ const WardenComplaints = () => {
       });
 
       if (response.ok) {
-        setComplaints(complaints.filter((complaint) => complaint.id !== id));
+        setComplaints(complaints.filter((complaint) => complaint.id !== id && complaint.complaint_id !== id));
+        console.log("Complaint deleted successfully");
       } else {
-        console.error("Failed to delete complaint");
+        console.error(`Failed to delete complaint: ${response.status}`);
+        alert("Failed to delete complaint");
       }
     } catch (error) {
       console.error("Error deleting complaint:", error);
+      alert("Error deleting complaint: " + error.message);
     }
   };
 

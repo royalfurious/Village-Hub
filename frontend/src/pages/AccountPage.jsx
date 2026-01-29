@@ -1,10 +1,8 @@
 import Navbar from "./Navbar";
 import { useState, useEffect } from "react";
-import { useAuth } from "../utils/Auth";
 import { Link } from "react-router-dom";
 
 function AccountPage() {
-  const { headers } = useAuth();
   const [userName, setUserName] = useState("");
   const [useremail, setemail] = useState("");
   const [userphone, setphone] = useState("");
@@ -14,18 +12,42 @@ function AccountPage() {
   const [userblockname, setblockname] = useState("");
   const [userType, setUserType] = useState(null);
 
+  // Helper function to decode JWT token
+  const decodeJWT = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error("Error decoding JWT:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchUserType = async () => {
       try {
+        const token = localStorage.getItem("jwtToken");
+        if (!token) return;
+        
         const response = await fetch("http://localhost:3000/userType", {
           method: "GET",
-          headers: headers,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
         });
 
         if (response.ok) {
           const data = await response.json();
           setUserType(data.userType);
-          console.log(data.userType);
+          console.log("User Type:", data.userType);
         } else {
           console.error("Failed to fetch user type");
         }
@@ -37,31 +59,72 @@ function AccountPage() {
     fetchUserType();
   }, []);
 
-  const getuserDetails = async (user_id) => {
+  const getuserDetails = async () => {
     try {
+      const token = localStorage.getItem("jwtToken");
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      // Decode JWT to get user_id
+      const decoded = decodeJWT(token);
+      if (!decoded || !decoded.user || !decoded.user.user_id) {
+        console.error("Could not extract user_id from token");
+        return;
+      }
+
+      const user_id = decoded.user.user_id;
+      console.log("Fetching details for user_id:", user_id);
+
       const response = await fetch(
         `http://localhost:3000/userDetails/${user_id}`,
         {
           method: "GET",
-          headers: headers,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
         }
       );
+
+      if (!response.ok) {
+        console.error(`Failed to fetch user details: ${response.status}`);
+        return;
+      }
+
       const data = await response.json();
-      console.log(data);
-      setUserName(data[0].full_name);
-      setemail(data[0].email);
-      setphone(data[0].phone);
-      setUsn(data[0].usn);
-      setRoom(data[0].room);
-      setblockID(data[0].block_id);
-      setblockname(data[0].block_name);
+      console.log("User details response:", data);
+
+      if (Array.isArray(data) && data.length > 0) {
+        setUserName(data[0].full_name || "");
+        setemail(data[0].email || "");
+        setphone(data[0].phone || "");
+        setUsn(data[0].usn || "");
+        setRoom(data[0].room || "");
+        setblockID(data[0].block_id || "");
+        setblockname(data[0].block_name || "");
+      } else {
+        // No user details returned; clear fields
+        console.log("No user details found in response");
+        setUserName("");
+        setemail("");
+        setphone("");
+        setUsn("");
+        setRoom("");
+        setblockID("");
+        setblockname("");
+      }
     } catch (err) {
-      console.error(err.message);
+      console.error("Error fetching user details:", err.message);
     }
   };
 
   useEffect(() => {
-    getuserDetails();
+    const token = localStorage.getItem("jwtToken");
+    if (token) {
+      getuserDetails();
+    }
   }, []);
 
   return (
@@ -117,9 +180,9 @@ function AccountPage() {
           </>
         )}
       </ul>
-      <button class="mt-5 ml-5 relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-cyan-500 to-blue-500 group-hover:from-cyan-500 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-cyan-200 dark:focus:ring-cyan-800">
+      <button className="mt-5 ml-5 relative inline-flex items-center justify-center p-0.5 mb-2 me-2 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-cyan-500 to-blue-500 group-hover:from-cyan-500 group-hover:to-blue-500 hover:text-white dark:text-white focus:ring-4 focus:outline-none focus:ring-cyan-200 dark:focus:ring-cyan-800">
         <Link
-          class=" relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-blue-500 rounded-md group-hover:bg-opacity-0"
+          className=" relative px-5 py-2.5 transition-all ease-in duration-75 bg-white dark:bg-blue-500 rounded-md group-hover:bg-opacity-0"
           to="/"
         >
           Back

@@ -16,14 +16,20 @@
 
 // export const useAuth = () => useContext(AuthContext);
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const useAuth = () => {
   const [authToken, setAuthToken] = useState(localStorage.getItem("jwtToken"));
 
+  useEffect(() => {
+    // Update token state when localStorage changes
+    const token = localStorage.getItem("jwtToken");
+    setAuthToken(token);
+  }, []);
+
   const headers = {
     "Content-Type": "application/json",
-    "Authorization": authToken
+    "Authorization": authToken ? `Bearer ${authToken}` : ""
   };
 
   return { authToken, headers };
